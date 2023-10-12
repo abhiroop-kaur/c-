@@ -1,0 +1,341 @@
+/// =========================================================================
+/// Written by pfederl@ucalgary.ca in 2023, for CPSC457.
+/// =========================================================================
+/// You need to edit this file.
+///
+/// You can delete all contents of this file and start from scratch if
+/// you wish, as long as you implement the analyzeDir() function as
+/// defined in "analyzeDir.h".
+
+#include "analyzeDir.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <dirent.h>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <set>
+#include <stack>
+#include <map>
+#include <stdio.h>
+#include <string>
+#include <sstream>  
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <unordered_map>
+#include <vector>
+
+struct DirInfo {
+  std::string path;
+  long count = 0;
+};
+
+
+ Results res;
+ std::string largest_file_path = "";
+ long largest_file_size = -1;
+
+
+
+
+
+
+
+/// check if path refers to a directory
+static bool is_dir(const std::string & path)
+{
+  struct stat buff;
+  if (0 != stat(path.c_str(), &buff)) return false;
+  return S_ISDIR(buff.st_mode);
+}
+
+/// check if path refers to a file
+static bool is_file(const std::string & path)
+{
+  struct stat buff;
+  if (0 != stat(path.c_str(), &buff)) return false;
+  return S_ISREG(buff.st_mode);
+}
+
+/// check if string ends with another string
+static bool ends_with(const std::string & str, const std::string & suffix)
+{
+  if (str.size() < suffix.size()) return false;
+  else
+    return 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
+
+static long file_size(const std::string& path) {
+    FILE* file = fopen(path.c_str(), "rb");
+    if (!file) {
+        printf("    - could not open file\n");
+        return -1;
+    }
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fclose(file);
+    return size;
+}
+
+
+
+
+
+
+
+
+
+
+std::unordered_map <std::string, int> hist;
+
+static DirInfo scan(const std::string & dir)
+{
+  DirInfo best { "", -1};
+  DirInfo local_best { dir , 0};
+  auto dirp = opendir( dir.c_str());
+
+  assert(dirp != nullptr);
+  for (auto de = readdir(dirp); de != nullptr; de = readdir(dirp)) {
+    std::string name = de->d_name;
+    // skip . and .. entries
+    if (name == "." or name == "..") continue;
+    std::string path = dir + "/" + name;
+
+    // check if this is directory
+    if (is_dir(dir)) {
+      res.n_dirs++;
+      continue;
+    }
+    // make sure this is a file
+    if( not is_file(path)) {
+      printf("    - not a file and not a directory!!!\n");
+      continue;
+    }
+    // // report size of the file
+    // {
+
+    // }
+
+    if (is_file(path)){
+      res.n_files++;
+      struct stat buff;
+      if (0 != stat(name.c_str(), &buff)) 
+        printf("    - could not determine size of file\n");
+      else
+        printf("    - file size: %ld bytes\n", long(buff.st_size));
+
+      int status = stat(path.c_str(), &buff);
+      long file_size = buff.st_size;
+
+
+
+
+
+      // Largesr file & its size
+      if (res.largest_file_size < file_size) {
+          res.largest_file_size = file_size;
+          res.largest_file_path = path.substr(2);
+      }
+
+         if (res.n_files == 0) {
+        res.largest_file_path = "";
+        res.largest_file_size = -1;
+    }
+
+
+
+
+
+
+      // Cumulative file size
+      res.all_files_size += file_size;
+      // check if filename ends with .txt
+      if (ends_with(path, ".txt")){
+      FILE *fp;
+      fp = fopen(path.c_str(),"r");
+      
+      while(1){
+        std::string result;
+      while(1) {
+        int c = fgetc(stdin);
+        if(c == EOF) break;
+        c = tolower(c);
+        if(! isalpha(c)) {
+          if(result.size() == 0)
+            continue;
+          else
+            if(result.size()<5){
+              result.clear();
+              continue;
+            }
+            break;
+        }
+        else {
+          // if(result.size() < 5 ) {
+          //   exit(-1);
+          // }
+          result.push_back(c);
+        }
+      }
+      if (result.size() == 0) break;
+      hist[result]++;
+
+      }
+      fclose(fp);
+    }
+  
+
+
+
+
+    std::vector<std::pair<std::string, int>> find_most_common_words(std::istream& input, int N)
+    {
+      // read the input stream and tokenize it into words
+      std::string word;
+     std::map<std::string, int> word_counts;
+      while (input >> word)
+      {
+        // remove any punctuation and convert all words to lowercase
+        std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c) { return std::tolower(c); });
+        word.erase(std::remove_if(word.begin(), word.end(), [](unsigned char c) { return !std::isalpha(c); }), word.end());
+
+        // update the word count dictionary
+        if (!word.empty())
+            word_counts[word]++;
+      }
+
+      // create a vector of pairs (word, count) and sort it by count in descending order
+      std::vector<std::pair<std::string, int>> word_count_pairs(word_counts.begin(), word_counts.end());
+      std::sort(word_count_pairs.begin(), word_count_pairs.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+        return a.second > b.second;
+      });
+
+      // return the N most common words as a vector of pairs
+      return std::vector<std::pair<std::string, int>>(word_count_pairs.begin(), word_count_pairs.begin() + std::min(N, static_cast<int>(word_count_pairs.size())));
+    }
+
+
+
+
+  //the number of all files and directories
+
+  void count_files_and_dirs(const std::string& path, int& num_files, int& num_dirs) {
+    DIR* dir = opendir(path.c_str());
+    if (dir == NULL) {
+        // Handle error
+        return;
+    }
+
+    struct dirent* entry;
+    struct stat buff;
+    while ((entry = readdir(dir)) != NULL) {
+        std::string name = entry->d_name;
+        if (name == "." || name == "..") {
+            continue;
+        }
+
+        std::string full_path = path + "/" + name;
+        struct stat st;
+        if (lstat(full_path.c_str(), &st) == -1) {
+            continue;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            num_dirs++;
+            count_files_and_dirs(path, res.n_files, res.n_dirs);
+        } else if (S_ISREG(buff.st_mode)) {
+            res.n_files++;
+        }
+    }
+
+    closedir(dirp);
+  
+  }
+    
+  
+
+
+
+
+    // let's see if this is an image and whether we can manage to get image info
+    // by calling an external utility 'identify'
+  //   std::string cmd = "identify -format '%wx%h' " + name + " 2> /dev/null";
+  //   std::string img_size;
+  //   auto fp = popen(cmd.c_str(), "r");
+  //   assert(fp);
+  //   char buff[PATH_MAX];
+  //   if( fgets(buff, PATH_MAX, fp) != NULL) {
+  //     img_size = buff;
+  //   }
+  //   int status = pclose(fp);
+  //   if( status != 0 or img_size[0] == '0')
+  //     img_size = "";
+  //   if( img_size.empty())
+  //     printf("    - not an image\n");
+  //   else
+  //     printf("    - image %s\n", img_size.c_str());
+  // }
+  
+
+  
+    assert(is_dir(path));
+    
+      auto sub_result = scan(path);
+      if( sub_result.count >= best.count )
+        best = sub_result;
+  
+      if(local_best.count >= best.count){
+        best = local_best;
+    }
+  
+    return best;
+    }
+
+
+
+
+// ======================================================================
+// You need to re-implement this function !!!!
+// ======================================================================
+//
+// analyzeDir(n) computes stats about current directory
+//   n = how many words and images to report in restuls
+//
+// The code below is incomplate/incorrect. Feel free to re-use any of it
+// in your implementation, or delete all of it.
+Results analyzeDir(int n)
+{
+  // The code below does a subset of the functionality you need to implement.
+  // It also contains several debugging printf() statements. When you submit
+  // your code for grading, please remove any dubugging pritf() statements.
+
+ 
+ DirInfo res = scan(".");
+
+  for(auto & h : hist)
+   for(auto & h : hist)
+    res.most_common_words.emplace_back(-h.second, h.first);
+  // if we have more than N entries, we'll sort partially, since
+  // we only need the first N to be sorted
+  if(res.most_common_words.size() > size_t(n)) {
+    std::partial_sort(res.most_common_words.begin(), res.most_common_words.begin() + n, res.most_common_words.end());
+    // drop all entries after the first n
+    res.most_common_words.resize(n);
+  } else {
+    std::sort(res.most_common_words.begin(), res.most_common_words.end());
+  }
+
+
+
+
+
+    std::string cmd = "identify -format '%wx%h' " + name + " 2> /dev/null";
+    std::string img_size;
+    auto fp = popen(cmd.c_str(), "r");
+    assert(fp);
+
+}
